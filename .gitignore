@@ -1,0 +1,11 @@
+data/
+__pycache__/
+*log
+log/
+log*
+dataset/
+savept/
+*.out
+old.py
+G*
+vanilla_d*
