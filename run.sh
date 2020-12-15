@@ -1,1 +1,1 @@
-CUDA_VISIBLE_DEVICES=3 python3 greedySRM.py
+CUDA_VISIBLE_DEVICES=0 python3 AdaGNN.py

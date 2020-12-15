@@ -3,20 +3,20 @@ from tqdm import tqdm
 import torch.nn.functional as F
 from torch_scatter import scatter
 from ogb.nodeproppred import PygNodePropPredDataset, Evaluator
-from layer import AdaGNN_v, GAT
+from layer import AdaGNN_v, GAT, SAGE
 from torch_geometric.nn import GENConv, DeepGCNLayer
 from torch_geometric.data import RandomNodeSampler
 from loguru import logger
 
 # args = parser.parse_args()
-log_name = 'Greedy_SRM_GAT_reset'
+log_name = 'Greedy_SRM_SAGE'
 num_layers=32
 dataset = PygNodePropPredDataset('ogbn-proteins', root='../data')
 splitted_idx = dataset.get_idx_split()
 data = dataset[0]
 data.node_species = None
 data.y = data.y.to(torch.float)
-reset=True
+reset=False
 # log_name = f'logs_version{version}_{times}'
 # Initialize features of nodes by aggregating edge features.
 row, col = data.edge_index
@@ -35,7 +35,7 @@ test_loader = RandomNodeSampler(data, num_parts=5, num_workers=5)
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = GAT(in_channels=data.x.size(-1), hidden_channels=64, num_layers=num_layers, out_channels=data.y.size(-1)).to(device)
+model = SAGE(in_channels=data.x.size(-1), hidden_channels=64, num_layers=num_layers, out_channels=data.y.size(-1)).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 criterion = torch.nn.BCEWithLogitsLoss()
 evaluator = Evaluator('ogbn-proteins')

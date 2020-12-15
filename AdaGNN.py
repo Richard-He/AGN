@@ -8,29 +8,31 @@ from torch_geometric.nn import GENConv, DeepGCNLayer
 from torch_geometric.data import RandomNodeSampler
 from loguru import logger
 from copy import deepcopy
+import pandas as pd
 # args = parser.parse_args()
 log_name = 'Horizontal_AdaGNN'
-num_gnns = 7
+num_gnns = 10
 layers = 1
 dataset = PygNodePropPredDataset('ogbn-proteins', root='../data')
 splitted_idx = dataset.get_idx_split()
 data = dataset[0]
 data.node_species = None
 data.y = data.y.to(torch.float)
+data.n_id = torch.arange(data.num_nodes)
 # log_name = f'logs_version{version}_{times}'
 # Initialize features of nodes by aggregating edge features.
 row, col = data.edge_index
 data.x = scatter(data.edge_attr, col, 0, dim_size=data.num_nodes, reduce='add')
-
 # Set split indices to masks.
 for split in ['train', 'valid', 'test']:
     mask = torch.zeros(data.num_nodes, dtype=torch.bool)
     mask[splitted_idx[split]] = True
     data[f'{split}_mask'] = mask
 data['test_mask'] = data['valid_mask'] | data['test_mask']
+y_tar = data.y[data.train_mask].cuda()
 
-map_ = torch.zeros(data.num_nodes)
-train_cnt = splitted_idx['train'].size(0)
+map_ = torch.zeros(data.num_nodes, dtype=torch.long)
+train_cnt = data.train_mask.int().sum()
 map_[splitted_idx['train']] = torch.arange(train_cnt)
 
 train_loader = RandomNodeSampler(data, num_parts=20, shuffle=True,
@@ -39,13 +41,14 @@ test_loader = RandomNodeSampler(data, num_parts=5, num_workers=5)
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = AdaGNN(in_channels=data.x.size(-1), hidden_channels=64, num_layers=28, out_channels=data.y.size(-1)).to(device)
+model = AdaGNN_h(in_channels=data.x.size(-1), hidden_channels=64, num_gnns=num_gnns, out_channels=data.y.size(-1),num_layer_list=[1]*num_gnns).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 # criterion = torch.nn.BCEWithLogitsLoss(reduction='none')
 evaluator = Evaluator('ogbn-proteins')
 
 logger.add(log_name)
 logger.info('logname: {}'.format(log_name))
+
 
 def train(epoch, ith):
     model.train()
@@ -57,10 +60,10 @@ def train(epoch, ith):
     for data in train_loader:
         optimizer.zero_grad()
         data = data.to(device)
-        out = model(data.x, data.edge_index, data.edge_attr, ith)
-        loss = F.binary_cross_entropy_with_logits(data.x[train_mask], data.y[train_mask], reduction='none')
+        out = model(data.x, data.edge_index, data.edge_attr, k=ith)
+        loss = F.binary_cross_entropy_with_logits(out[data.train_mask], data.y[data.train_mask], reduction='none')
         weighted_sum_loss = torch.sum(loss * weight[map_[data.n_id[data.train_mask]]])
-        loss = weighted_sum_loss.mean()
+        loss = weighted_sum_loss.sum()
         loss.backward()
         optimizer.step()
 
@@ -74,7 +77,7 @@ def train(epoch, ith):
     return total_loss / total_examples
 
 @torch.no_grad()
-def evaluate():
+def evaluate(weight):
     model.eval()
 
     y_true = {'train': [], 'valid': [], 'test': []}
@@ -85,31 +88,29 @@ def evaluate():
         out = model(data.x, data.edge_index, data.edge_attr, -1)
         y_s = deepcopy(data.y)
         y_s[y_s==0] = -1
-        weight[data.n_id] = 1 / (1 + torch.exp(y_s * out))
+        weight[data.n_id[data.train_mask]] = 1 / (1 + torch.exp(y_s[data.train_mask] * out[data.train_mask]))
         for split in y_true.keys():
             mask = data[f'{split}_mask']
             y_true[split].append(data.y[mask].cpu())
             y_pred[split].append(out[mask].cpu())
-        
-        y_pred[y_pred>0] = 1
-        y_pred[y_pred<0] = 0
-    weight = weight/weight.sum()
+
+    new_weight = weight/weight.sum()
     train_rocauc = evaluator.eval({
         'y_true': torch.cat(y_true['train'], dim=0),
         'y_pred': torch.cat(y_pred['train'], dim=0),
-    })['acc']
+    })['rocauc']
 
     valid_rocauc = evaluator.eval({
         'y_true': torch.cat(y_true['valid'], dim=0),
         'y_pred': torch.cat(y_pred['valid'], dim=0),
-    })['acc']
+    })['rocauc']
 
     test_rocauc = evaluator.eval({
         'y_true': torch.cat(y_true['test'], dim=0),
         'y_pred': torch.cat(y_pred['test'], dim=0),
-    })['acc']
+    })['rocauc']
 
-    return train_rocauc, valid_rocauc, test_rocauc
+    return train_rocauc, valid_rocauc, test_rocauc, new_weight
 
 @torch.no_grad()
 def test(ith):
@@ -118,7 +119,7 @@ def test(ith):
     y_true = {'train': [], 'valid': [], 'test': []}
     y_pred = {'train': [], 'valid': [], 'test': []}
 
-    y_pred_t = torch.zeros(weight.size())
+    y_pred_t = torch.zeros(weight.size()).cuda()
     for data in test_loader:
         data = data.to(device)
         out = model(data.x, data.edge_index, data.edge_attr,ith)
@@ -128,8 +129,13 @@ def test(ith):
             y_true[split].append(data.y[mask].cpu())
             y_pred[split].append(out[mask].cpu())
 
-        y_pred_t[data.n_id[data.train_mask]] = out[data.train_mask]
-    
+        y_pred_t[map_[data.n_id[data.train_mask]]] = out[data.train_mask]
+
+    y_pred_t[y_pred_t>0] = 1
+    y_pred_t[y_pred_t<0] = 0
+    err = (y_pred_t != y_tar)
+    w_err = err.int() * weight
+    w_err = w_err.sum()
     y_true_t = torch.cat(y_true['train'], dim=0)
     y_pred_t = torch.cat(y_pred['train'], dim=0)
     train_rocauc = evaluator.eval({
@@ -147,35 +153,42 @@ def test(ith):
         'y_pred': torch.cat(y_pred['test'], dim=0),
     })['rocauc']
 
-    return train_rocauc, valid_rocauc, test_rocauc
+    return train_rocauc, valid_rocauc, test_rocauc, w_err
 
-weight = torch.ones(train_cnt, data.y.size(-1))
+
+weight = torch.ones(train_cnt, data.y.size(-1)).cuda()
 weight = weight / weight.sum()
 train_list = []
 val_list = []
 test_list = []
-layer_list = []
+num_list = []
 epoch_list = []
-for layers in num_layers:
+gnn_cnt = []
+for ind in range(num_gnns):
     best_train = 0
-    best_val = 0
+    best_w_err = 1
     best_val_epoch = 0
-    model.unfix(layers)
-    for epoch in range(1, 800):
-        loss = train(epoch)
-        train_rocauc, valid_rocauc, test_rocauc = test()
-        if valid_rocauc > best_val:
+    glob_w_err =0
+    for epoch in range(1, 600):
+        loss = train(epoch,ind)
+        train_rocauc, valid_rocauc, test_rocauc, w_err = test(ind)
+        glob_w_err = w_err
+        if w_err < best_w_err:
             best_val = valid_rocauc
             best_val_epoch = epoch
-            logger.info(f'num_layers: {layers}, epochs: {epoch},train: {train_rocauc:.4f} new best valid: {best_val:.4f}, test: {test_rocauc:.4f}')
+            logger.info(f'num_gnns: {ind+1}, epochs: {epoch},train: {train_rocauc:.4f} new best weighted error: {best_val:.4f}, test: {test_rocauc:.4f}')
             train_list.append(train_rocauc)
             val_list.append(valid_rocauc)
             test_list.append(test_rocauc)
-            layer_list.append(layers)
+            gnn_cnt.append(ind+1)
             epoch_list.append(epoch)
         print(f'Loss: {loss:.4f}, Train: {train_rocauc:.4f}, '
-            f'Val: {valid_rocauc:.4f}, Test: {test_rocauc:.4f}')
-        if epoch - best_val_epoch > 50:
+            f'Val: {valid_rocauc:.4f}, Test: {test_rocauc:.4f}, Weighted_Error: {w_err:.4f}')
+        if epoch - best_val_epoch > 30:
             break
-df = pd.DataFrame({'layers':layer_list, 'epochs':epoch_list, 'train':train_list, 'val': val_list, 'test': test_list})
+    model.alpha[ind] = 0.5*torch.log2((1-glob_w_err)/glob_w_err)
+    train_rocauc, valid_rocauc, test_rocauc, new_weight = evaluate(weight)
+    weight = new_weight
+    logger.info(f'Evaluate : NumGNNs :{ind+1}, Train_rocauc:{train_rocauc:.4f},Valid_rocauc:{valid_rocauc:.4f}, Test_rocauc:{test_rocauc:.4f}')
+df = pd.DataFrame({'gnns':gnn_cnt, 'epochs':epoch_list, 'train':train_list, 'val': val_list, 'test': test_list})
 df.to_pickle('vanilla_dgcn')

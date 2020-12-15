@@ -1,0 +1,86 @@
+2020-12-15 10:42:47.731 | INFO     | __main__:<module>:48 - logname: Horizontal_AdaGNN
+2020-12-15 10:45:18.741 | INFO     | __main__:<module>:48 - logname: Horizontal_AdaGNN
+2020-12-15 10:47:28.356 | INFO     | __main__:<module>:48 - logname: Horizontal_AdaGNN
+2020-12-15 10:49:06.299 | INFO     | __main__:<module>:48 - logname: Horizontal_AdaGNN
+2020-12-15 11:02:02.389 | INFO     | __main__:<module>:49 - logname: Horizontal_AdaGNN
+2020-12-15 11:08:10.754 | INFO     | __main__:<module>:49 - logname: Horizontal_AdaGNN
+2020-12-15 11:10:02.801 | INFO     | __main__:<module>:49 - logname: Horizontal_AdaGNN
+2020-12-15 11:16:06.083 | INFO     | __main__:<module>:48 - logname: Horizontal_AdaGNN
+2020-12-15 11:17:48.985 | INFO     | __main__:<module>:49 - logname: Horizontal_AdaGNN
+2020-12-15 11:19:22.895 | INFO     | __main__:<module>:49 - logname: Horizontal_AdaGNN
+2020-12-15 11:21:01.884 | INFO     | __main__:<module>:49 - logname: Horizontal_AdaGNN
+2020-12-15 11:21:19.679 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 1,train: 0.6721 new best weighted error: 0.5615, test: 0.5826
+2020-12-15 11:23:53.234 | INFO     | __main__:<module>:49 - logname: Horizontal_AdaGNN
+2020-12-15 11:24:10.837 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 1,train: 0.6680 new best weighted error: 0.6104, test: 0.5770
+2020-12-15 11:28:23.742 | INFO     | __main__:<module>:49 - logname: Horizontal_AdaGNN
+2020-12-15 11:28:41.004 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 1,train: 0.6727 new best weighted error: 0.5938, test: 0.6037
+2020-12-15 11:28:57.579 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 2,train: 0.7229 new best weighted error: 0.7096, test: 0.6994
+2020-12-15 11:29:13.785 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 3,train: 0.7442 new best weighted error: 0.7275, test: 0.7396
+2020-12-15 11:29:30.455 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 4,train: 0.7621 new best weighted error: 0.7370, test: 0.7359
+2020-12-15 11:29:47.913 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 5,train: 0.7742 new best weighted error: 0.7550, test: 0.7703
+2020-12-15 11:30:04.419 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 6,train: 0.7782 new best weighted error: 0.7605, test: 0.7832
+2020-12-15 11:30:21.106 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 7,train: 0.7855 new best weighted error: 0.7651, test: 0.7904
+2020-12-15 11:30:37.229 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 8,train: 0.7915 new best weighted error: 0.7675, test: 0.7865
+2020-12-15 11:30:53.693 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 9,train: 0.7975 new best weighted error: 0.7713, test: 0.7886
+2020-12-15 11:31:10.267 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 10,train: 0.8020 new best weighted error: 0.7736, test: 0.7837
+2020-12-15 11:31:27.240 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 11,train: 0.8050 new best weighted error: 0.7736, test: 0.7876
+2020-12-15 11:31:44.519 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 12,train: 0.8061 new best weighted error: 0.7747, test: 0.7896
+2020-12-15 11:32:00.631 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 13,train: 0.8098 new best weighted error: 0.7768, test: 0.7925
+2020-12-15 11:32:17.472 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 14,train: 0.8128 new best weighted error: 0.7797, test: 0.7927
+2020-12-15 11:32:33.645 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 15,train: 0.8148 new best weighted error: 0.7840, test: 0.7913
+2020-12-15 11:32:50.104 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 16,train: 0.8190 new best weighted error: 0.7859, test: 0.7953
+2020-12-15 11:33:07.670 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 17,train: 0.8205 new best weighted error: 0.7877, test: 0.7864
+2020-12-15 11:33:24.545 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 18,train: 0.8227 new best weighted error: 0.7901, test: 0.7960
+2020-12-15 11:33:42.171 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 19,train: 0.8232 new best weighted error: 0.7895, test: 0.7990
+2020-12-15 11:33:58.941 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 20,train: 0.8258 new best weighted error: 0.7903, test: 0.7949
+2020-12-15 11:34:15.984 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 21,train: 0.8251 new best weighted error: 0.7909, test: 0.7980
+2020-12-15 11:34:33.734 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 22,train: 0.8264 new best weighted error: 0.7884, test: 0.7938
+2020-12-15 11:34:50.726 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 23,train: 0.8266 new best weighted error: 0.7899, test: 0.7957
+2020-12-15 11:35:07.839 | INFO     | __main__:<module>:173 - num_gnns: 1, epochs: 24,train: 0.8283 new best weighted error: 0.7885, test: 0.7939
+2020-12-15 11:36:08.924 | INFO     | __main__:<module>:50 - logname: Horizontal_AdaGNN
+2020-12-15 11:36:26.209 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 1,train: 0.6702 new best weighted error: 0.6007, test: 0.6304
+2020-12-15 11:36:43.555 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 2,train: 0.7233 new best weighted error: 0.7032, test: 0.7070
+2020-12-15 11:37:00.820 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 3,train: 0.7450 new best weighted error: 0.7282, test: 0.7532
+2020-12-15 11:37:18.314 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 4,train: 0.7642 new best weighted error: 0.7458, test: 0.7615
+2020-12-15 11:37:35.234 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 5,train: 0.7753 new best weighted error: 0.7537, test: 0.7803
+2020-12-15 11:37:52.189 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 6,train: 0.7789 new best weighted error: 0.7573, test: 0.7879
+2020-12-15 11:38:09.632 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 7,train: 0.7864 new best weighted error: 0.7674, test: 0.7836
+2020-12-15 11:38:25.933 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 8,train: 0.7914 new best weighted error: 0.7670, test: 0.7867
+2020-12-15 11:38:42.542 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 9,train: 0.7967 new best weighted error: 0.7669, test: 0.7897
+2020-12-15 11:38:59.291 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 10,train: 0.8025 new best weighted error: 0.7726, test: 0.7909
+2020-12-15 11:39:15.821 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 11,train: 0.8065 new best weighted error: 0.7740, test: 0.7919
+2020-12-15 11:39:32.482 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 12,train: 0.8090 new best weighted error: 0.7781, test: 0.7924
+2020-12-15 11:39:49.761 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 13,train: 0.8110 new best weighted error: 0.7774, test: 0.7929
+2020-12-15 11:40:06.841 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 14,train: 0.8163 new best weighted error: 0.7808, test: 0.7950
+2020-12-15 11:40:23.812 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 15,train: 0.8170 new best weighted error: 0.7805, test: 0.7901
+2020-12-15 11:40:41.848 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 16,train: 0.8207 new best weighted error: 0.7866, test: 0.7983
+2020-12-15 11:40:58.889 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 17,train: 0.8222 new best weighted error: 0.7897, test: 0.8014
+2020-12-15 11:41:16.149 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 18,train: 0.8238 new best weighted error: 0.7868, test: 0.7991
+2020-12-15 11:41:33.101 | INFO     | __main__:<module>:175 - num_gnns: 1, epochs: 19,train: 0.8260 new best weighted error: 0.7906, test: 0.8016
+2020-12-15 11:44:44.226 | INFO     | __main__:<module>:50 - logname: Horizontal_AdaGNN
+2020-12-15 11:47:20.715 | INFO     | __main__:<module>:50 - logname: Horizontal_AdaGNN
+2020-12-15 11:48:31.085 | INFO     | __main__:<module>:50 - logname: Horizontal_AdaGNN
+2020-12-15 11:49:38.697 | INFO     | __main__:<module>:50 - logname: Horizontal_AdaGNN
+2020-12-15 11:49:56.018 | INFO     | __main__:<module>:177 - num_gnns: 1, epochs: 1,train: 0.6615 new best weighted error: 0.5856, test: 0.5853
+2020-12-15 11:50:12.876 | INFO     | __main__:<module>:177 - num_gnns: 1, epochs: 2,train: 0.7020 new best weighted error: 0.6527, test: 0.6475
+2020-12-15 11:50:30.215 | INFO     | __main__:<module>:177 - num_gnns: 1, epochs: 3,train: 0.7430 new best weighted error: 0.7193, test: 0.7296
+2020-12-15 11:52:16.719 | INFO     | __main__:<module>:50 - logname: Horizontal_AdaGNN
+2020-12-15 11:52:34.497 | INFO     | __main__:<module>:178 - num_gnns: 1, epochs: 1,train: 0.6835 new best weighted error: 0.6198, test: 0.5820
+2020-12-15 11:55:14.604 | INFO     | __main__:<module>:50 - logname: Horizontal_AdaGNN
+2020-12-15 11:55:31.706 | INFO     | __main__:<module>:179 - num_gnns: 1, epochs: 1,train: 0.6750 new best weighted error: 0.5865, test: 0.6283
+2020-12-15 12:00:11.525 | INFO     | __main__:<module>:50 - logname: Horizontal_AdaGNN
+2020-12-15 12:00:28.780 | INFO     | __main__:<module>:179 - num_gnns: 1, epochs: 1,train: 0.6765 new best weighted error: 0.5992, test: 0.6218
+2020-12-15 12:00:42.018 | INFO     | __main__:<module>:192 - Evaluate : NumGNNs :1, Train_rocauc:0.6765,Valid_rocauc:0.5992, Test_rocauc:0.6218
+2020-12-15 12:00:58.291 | INFO     | __main__:<module>:179 - num_gnns: 2, epochs: 1,train: 0.5500 new best weighted error: 0.5023, test: 0.4831
+2020-12-15 12:01:11.905 | INFO     | __main__:<module>:192 - Evaluate : NumGNNs :2, Train_rocauc:0.6727,Valid_rocauc:0.5639, Test_rocauc:0.6039
+2020-12-15 12:01:28.848 | INFO     | __main__:<module>:179 - num_gnns: 3, epochs: 1,train: 0.4476 new best weighted error: 0.5024, test: 0.4722
+2020-12-15 12:01:42.393 | INFO     | __main__:<module>:192 - Evaluate : NumGNNs :3, Train_rocauc:0.6710,Valid_rocauc:0.5582, Test_rocauc:0.5911
+2020-12-15 12:01:59.355 | INFO     | __main__:<module>:179 - num_gnns: 4, epochs: 1,train: 0.4395 new best weighted error: 0.5426, test: 0.5161
+2020-12-15 12:02:14.298 | INFO     | __main__:<module>:192 - Evaluate : NumGNNs :4, Train_rocauc:0.6906,Valid_rocauc:0.6076, Test_rocauc:0.6231
+2020-12-15 12:02:31.081 | INFO     | __main__:<module>:179 - num_gnns: 5, epochs: 1,train: 0.4783 new best weighted error: 0.5732, test: 0.5306
+2020-12-15 12:02:45.949 | INFO     | __main__:<module>:192 - Evaluate : NumGNNs :5, Train_rocauc:0.6938,Valid_rocauc:0.6208, Test_rocauc:0.6370
+2020-12-15 12:03:03.278 | INFO     | __main__:<module>:179 - num_gnns: 6, epochs: 1,train: 0.5033 new best weighted error: 0.5342, test: 0.4734
+2020-12-15 12:03:18.432 | INFO     | __main__:<module>:192 - Evaluate : NumGNNs :6, Train_rocauc:0.6945,Valid_rocauc:0.6195, Test_rocauc:0.6243
+2020-12-15 12:03:35.915 | INFO     | __main__:<module>:179 - num_gnns: 7, epochs: 1,train: 0.5340 new best weighted error: 0.5746, test: 0.5349
+2020-12-15 12:03:51.330 | INFO     | __main__:<module>:192 - Evaluate : NumGNNs :7, Train_rocauc:0.7041,Valid_rocauc:0.6454, Test_rocauc:0.6224
+2020-12-15 12:04:07.939 | INFO     | __main__:<module>:179 - num_gnns: 8, epochs: 1,train: 0.6084 new best weighted error: 0.6009, test: 0.5912
