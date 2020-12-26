@@ -1,4 +1,7 @@
+result/
+.vscode/
 data/
+data*/
 __pycache__/
 *log
 log/

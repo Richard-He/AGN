@@ -2,21 +2,24 @@ import torch
 from tqdm import tqdm
 import torch.nn.functional as F
 from torch_scatter import scatter
-from ogb.nodeproppred import PygNodePropPredDataset, Evaluator
-from layer import AdaGNN_v, GAT, SAGE
+from ogb.nodeproppred import PygNodePropPredDataset
+from evaluate import Evaluator
+from layer import AdaGNN_v, GAT, SAGE, GCN
 from torch_geometric.nn import GENConv, DeepGCNLayer
 from torch_geometric.data import RandomNodeSampler
+from torch_geometric.datasets import Reddit, Yelp, Flickr
 from loguru import logger
 
 # args = parser.parse_args()
-log_name = 'Greedy_SRM_SAGE'
-num_layers=32
+num_layers=15
 dataset = PygNodePropPredDataset('ogbn-proteins', root='../data')
 splitted_idx = dataset.get_idx_split()
 data = dataset[0]
 data.node_species = None
 data.y = data.y.to(torch.float)
-reset=False
+reset = False
+metric = 'f1'
+log_name = f'Greedy_SRM_GEN_reset_{reset}_f1_2'
 # log_name = f'logs_version{version}_{times}'
 # Initialize features of nodes by aggregating edge features.
 row, col = data.edge_index
@@ -35,11 +38,10 @@ test_loader = RandomNodeSampler(data, num_parts=5, num_workers=5)
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = SAGE(in_channels=data.x.size(-1), hidden_channels=64, num_layers=num_layers, out_channels=data.y.size(-1)).to(device)
+model = AdaGNN_v(in_channels=data.x.size(-1), hidden_channels=64, num_layers=num_layers, out_channels=data.y.size(-1)).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 criterion = torch.nn.BCEWithLogitsLoss()
 evaluator = Evaluator('ogbn-proteins')
-
 logger.add(log_name)
 logger.info('logname: {}'.format(log_name))
 
@@ -78,34 +80,33 @@ def test():
     for data in test_loader:
         data = data.to(device)
         out = model(data.x, data.edge_index, data.edge_attr)
-        # out[out>0] = 1
-        # out[out<0] = 0
+
         for split in y_true.keys():
             mask = data[f'{split}_mask']
             y_true[split].append(data.y[mask].cpu())
             y_pred[split].append(out[mask].cpu())
 
 
-    train_rocauc = evaluator.eval({
+    train_m = evaluator.eval({
         'y_true': torch.cat(y_true['train'], dim=0),
         'y_pred': torch.cat(y_pred['train'], dim=0),
-    })['rocauc']
+    }, metric)
 
-    valid_rocauc = evaluator.eval({
+    valid_m = evaluator.eval({
         'y_true': torch.cat(y_true['valid'], dim=0),
         'y_pred': torch.cat(y_pred['valid'], dim=0),
-    })['rocauc']
+    }, metric)
 
-    test_rocauc = evaluator.eval({
+    test_m = evaluator.eval({
         'y_true': torch.cat(y_true['test'], dim=0),
         'y_pred': torch.cat(y_pred['test'], dim=0),
-    })['rocauc']
+    }, metric)
 
-    return train_rocauc, valid_rocauc, test_rocauc
+    return train_m, valid_m, test_m
 
 # evaluator.num_tasks = data.y.size(1)
 # evaluator.eval_metric = 'acc'
-num_layers = torch.arange(1, 30, 2)
+num_layers = torch.arange(1, num_layers, 2)
 train_list = []
 val_list = []
 test_list = []
@@ -134,5 +135,5 @@ for layers in num_layers:
             f'Val: {valid_rocauc:.4f}, Test: {test_rocauc:.4f}')
         if epoch - best_val_epoch > 50:
             break
-df = pd.DataFrame({'layers':layer_list, 'epochs':epoch_list, 'train':train_list, 'val': val_list, 'test': test_list})
-df.to_pickle('vanilla_dgcn')
+# df = pd.DataFrame({'layers':layer_list, 'epochs':epoch_list, 'train':train_list, 'val': val_list, 'test': test_list})
+# df.to_pickle('vanilla_dgcn')

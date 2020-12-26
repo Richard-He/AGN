@@ -7,24 +7,43 @@ from evaluate import Evaluator
 from layer import AdaGNN_h
 from torch_geometric.nn import GENConv, DeepGCNLayer
 from torch_geometric.data import RandomNodeSampler
+from torch_geometric.datasets import Reddit, Yelp, Flickr
 from loguru import logger
 from copy import deepcopy
-import pandas as pd
+import argparse
+
 # args = parser.parse_args()
-metrics= 'f1'
-num_gnns = 10
-layers = 2
-log_name = f'Horizontal_AdaGNN_{metrics}_long_num_gnns_{num_gnns}_layers_{layers}'
-dataset = PygNodePropPredDataset('ogbn-proteins', root='../data')
+parser = argparse.ArgumentParser(description='Greedy_SRM_old')
+parser.add_argument('--runs',type=int, default=1)
+parser.add_argument('--gnn', type=str, default='GCN')
+parser.add_argument('--reset',type=lambda x: (str(x).lower() == 'true'), default=False)
+parser.add_argument('--dataset',type=str, default='protein')
+parser.add_argument('--layers', type=int, default=1)
+parser.add_argument('--iter', type=int, default=10)
+parser.add_argument('--epochs', type=int, default=800)
+parser.add_argument('--early', type=int, default=80)
+
+args = parser.parse_args()
+num_gnns = args.num_gnns
+gnn = args.gnn
+data_n = args.dataset
+layer = args.layers
+metrics = 'f1' if data_n == 'protein' else 'acc'
+
+if data_n == 'protein':
+    dataset = PygNodePropPredDataset('ogbn-proteins', root='../data')
+elif data_n == 'product':
+    dataset = PygNodePropPredDataset('ogbn-products', root='../data/products')
 splitted_idx = dataset.get_idx_split()
 data = dataset[0]
-data.node_species = None
+#data.node_species = None
 data.y = data.y.to(torch.float)
-data.n_id = torch.arange(data.num_nodes)
+log_name = f'AdaGNN_{gnn}_dataset_{dataset_n}_weak_layers_{weak_layer}_'
 # log_name = f'logs_version{version}_{times}'
 # Initialize features of nodes by aggregating edge features.
 row, col = data.edge_index
-data.x = scatter(data.edge_attr, col, 0, dim_size=data.num_nodes, reduce='add')
+if data_n == 'protein':
+    data.x = scatter(data.edge_attr, col, 0, dim_size=data.num_nodes, reduce='add')
 # Set split indices to masks.
 for split in ['train', 'valid', 'test']:
     mask = torch.zeros(data.num_nodes, dtype=torch.bool)
@@ -37,21 +56,21 @@ map_ = torch.zeros(data.num_nodes, dtype=torch.long)
 train_cnt = data['train_mask'].int().sum()
 map_[splitted_idx['train']] = torch.arange(train_cnt)
 
+
 train_loader = RandomNodeSampler(data, num_parts=20, shuffle=True,
                                  num_workers=5)
 test_loader = RandomNodeSampler(data, num_parts=5, num_workers=5)
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = AdaGNN_h(in_channels=data.x.size(-1), hidden_channels=64, num_gnns=num_gnns, out_channels=data.y.size(-1),num_layer_list=[layers]*num_gnns).to(device)
+model = AdaGNN_h(in_channels=data.x.size(-1), hidden_channels=64, num_layer_list=[layer] * 20, out_channels=data.y.size(-1), gnn_model=[gnn] * 20).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-# criterion = torch.nn.BCEWithLogitsLoss(reduction='none')
-evaluator = Evaluator('ogbn-proteins')
+# criterion = torch.nn.BCEWithLogitsLoss()
+evaluator = Evaluator(data_n)
 
 logger.add(log_name)
 logger.info('logname: {}'.format(log_name))
-
-# evaluator.eval_metric = "acc"
+criterion = nn.BCEWithLogitsLoss() if data_n == 'protein' else nn.CrossEntropyLoss()
 
 def train(epoch, ith):
     model.train()
@@ -64,7 +83,7 @@ def train(epoch, ith):
         optimizer.zero_grad()
         data = data.to(device)
         out = model(data.x, data.edge_index, data.edge_attr, k=ith)
-        loss = F.binary_cross_entropy_with_logits(out[data.train_mask], data.y[data.train_mask], reduction='none')
+        loss = criterion(out[data.train_mask], data.y[data.train_mask], reduction='none')
         loss = torch.sum(loss * weight[map_[data.n_id[data.train_mask]]])
         loss.backward()
         optimizer.step()
@@ -78,6 +97,7 @@ def train(epoch, ith):
 
     return total_loss / total_examples
 
+
 @torch.no_grad()
 def evaluate(weight, metric):
     model.eval()
@@ -88,9 +108,18 @@ def evaluate(weight, metric):
     for data in test_loader:
         data = data.to(device)
         out = model(data.x, data.edge_index, data.edge_attr, -1)
+        m = data.train_mask
+
+        if data_n == 'protein':
+
+        pred_lb = out.argmax(dim=0,keepdim=True)
+        outp = pred_lb
+        m = data.train_mask
+        err = (pred_lb[m][0]!=y[m]).float()
+        err[err==0] = -1
         y_s = deepcopy(data.y)
         y_s[y_s == 0] = -1
-        weight[map_[data.n_id[data.train_mask]]] = 1/(1 + torch.exp(y_s[data.train_mask] * out[data.train_mask]))
+        # weight[map_[data.n_id[data.train_mask]]] = 1 / (1 + torch.exp(y_s[data.train_mask] * out[data.train_mask]))
         for split in y_true.keys():
             mask = data[f'{split}_mask']
             y_true[split].append(data.y[mask].cpu())
@@ -112,7 +141,6 @@ def evaluate(weight, metric):
     }, metric)
 
     return train_m, valid_m, test_m
-
 
 @torch.no_grad()
 def test(ind,metric):
@@ -157,8 +185,12 @@ def test(ind,metric):
 
     return train_m, valid_m, test_m, w_err
 
-
-weight = torch.ones(train_cnt, data.y.size(-1)).cuda()
+# evaluator.num_tasks = data.y.size(1)
+# evaluator.eval_metric = 'acc'
+if data_n == 'protein':
+    weight = torch.ones(train_cnt, data.y.size(-1)).cuda()
+else:
+    weight = torch.ones(train_cnt).cuda()
 weight = weight / weight.sum()
 train_list = []
 val_list = []
@@ -193,5 +225,6 @@ for ind in range(num_gnns):
     train_rocauc, valid_rocauc, test_rocauc = evaluate(weight,metrics)
     weight = weight/weight.sum()
     logger.info(f'Evaluate : NumGNNs :{ind+1}, Train_{metrics}:{train_rocauc:.4f},Valid_{metrics}:{valid_rocauc:.4f}, Test_{metrics}:{test_rocauc:.4f}')
-# df = pd.DataFrame({'gnns':gnn_cnt, 'epochs':epoch_list, 'train':train_list, 'val': val_list, 'test': test_list})
-# df.to_pickle('AdaGNN')
+
+# df = pd.DataFrame({'layers':layer_list, 'epochs':epoch_list, 'train':train_list, 'val': val_list, 'test': test_list})
+# df.to_pickle('vanilla_dgcn')
