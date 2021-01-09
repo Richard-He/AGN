@@ -12,9 +12,10 @@ from copy import deepcopy
 import pandas as pd
 # args = parser.parse_args()
 metrics= 'f1'
-num_gnns = 10
-layers = 2
-log_name = f'Horizontal_AdaGNN_{metrics}_long_num_gnns_{num_gnns}_layers_{layers}'
+num_gnns = 18
+layers = 1
+gnn_m = 'GCN'
+log_name = f'./result/Horizontal_AdaGNN_{metrics}_long_num_gnns_{num_gnns}_layers_{layers}_model_{gnn_m}'
 dataset = PygNodePropPredDataset('ogbn-proteins', root='../data')
 splitted_idx = dataset.get_idx_split()
 data = dataset[0]
@@ -43,7 +44,7 @@ test_loader = RandomNodeSampler(data, num_parts=5, num_workers=5)
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = AdaGNN_h(in_channels=data.x.size(-1), hidden_channels=64, num_gnns=num_gnns, out_channels=data.y.size(-1),num_layer_list=[layers]*num_gnns).to(device)
+model = AdaGNN_h(in_channels=data.x.size(-1), hidden_channels=64, num_gnns=num_gnns, out_channels=data.y.size(-1),num_layer_list=[layers]*num_gnns, gnn_model=[gnn_m]*num_gnns).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 # criterion = torch.nn.BCEWithLogitsLoss(reduction='none')
 evaluator = Evaluator('ogbn-proteins')
@@ -90,7 +91,7 @@ def evaluate(weight, metric):
         out = model(data.x, data.edge_index, data.edge_attr, -1)
         y_s = deepcopy(data.y)
         y_s[y_s == 0] = -1
-        weight[map_[data.n_id[data.train_mask]]] = 1/(1 + torch.exp(y_s[data.train_mask] * out[data.train_mask]))
+        weight[map_[data.n_id[data.train_mask]]] = 1/(1 + torch.exp(y_s[data.train_mask] * 2 * (F.sigmoid(out[data.train_mask])-0.5)))
         for split in y_true.keys():
             mask = data[f'{split}_mask']
             y_true[split].append(data.y[mask].cpu())
@@ -166,6 +167,9 @@ test_list = []
 num_list = []
 epoch_list = []
 gnn_cnt = []
+losses = []
+ep = []
+layr = []
 for ind in range(num_gnns):
     best_train = 0
     best_w_err = 1
@@ -187,11 +191,17 @@ for ind in range(num_gnns):
         print(f'Loss: {loss:.4f}, Train: {train_rocauc:.4f}, '
             f'Val: {valid_rocauc:.4f}, Test: {test_rocauc:.4f}, Weighted_Error: {w_err:.4f}')
         if epoch - best_val_epoch > 30:
+            losses.append(loss)
+            ep.append(epoch)
+            layr.append(ind)
             break
     model.alpha[ind] = 0.5*torch.log2((1-w_err)/w_err)
     print(f'alpha_{ind} = {model.alpha}')
     train_rocauc, valid_rocauc, test_rocauc = evaluate(weight,metrics)
     weight = weight/weight.sum()
     logger.info(f'Evaluate : NumGNNs :{ind+1}, Train_{metrics}:{train_rocauc:.4f},Valid_{metrics}:{valid_rocauc:.4f}, Test_{metrics}:{test_rocauc:.4f}')
+t_dic = {'num_gnns': layr, 'epochs': ep, 'loss':losses}
+df = pd.DataFrame.from_dict(t_dic)
+df.to_pickle(log_name+'_save_')
 # df = pd.DataFrame({'gnns':gnn_cnt, 'epochs':epoch_list, 'train':train_list, 'val': val_list, 'test': test_list})
 # df.to_pickle('AdaGNN')

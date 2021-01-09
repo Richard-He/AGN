@@ -1,4 +1,4 @@
-from sklearn.metrics import roc_auc_score, f1_score
+from sklearn.metrics import roc_auc_score, f1_score, accuracy_score,log_loss
 import pandas as pd
 import os
 import numpy as np
@@ -9,9 +9,9 @@ except ImportError:
     torch = None
 
 class Evaluator:
-    def __init__(self, name):
-        self.name = name
-
+    def __init__(self, name, t_ype=1):
+        # self.name = name
+        self.type = t_ype
         # # meta_info = pd.read_csv(os.path.join(os.path.dirname(__file__), 'master.csv'), index_col = 0)
         # if not self.name in meta_info:
         #     print(self.name)
@@ -70,51 +70,74 @@ class Evaluator:
         if t == 'roc':
             return  self._eval_rocauc(y_true, y_pred)
         elif t == 'acc':
-            return self._eval_acc(y_true, f(y_pred))
+            return self._eval_acc(y_true, y_pred)
         elif t == 'f1':     
-            return self._eval_f1(y_true,f(y_pred))
+            return self._eval_f1(y_true, y_pred)
+        elif t == 'log':
+            return self._eval_log(y_true, y_pred)
 
     # def _evaln_(self, y_true, y_pred):
     #     return {'rocauc': _eval_rocauc(y_true, y_pred), 'acc': _eval_acc(y_true, y_pred)}
 
+    def _eval_log(self, y_true, y_pred):
+        if self.type == 1:
+            f1_list = []
+            for i in range(y_true.shape[1]):
+                if np.sum(y_true[:,i] == 1) > 0 and np.sum(y_true[:,i] == 0) > 0:
+                    is_labeled = y_true[:,i] == y_true[:,i]
+                    f1_list.append(log_loss(y_true[is_labeled,i], y_pred[is_labeled,i]))
+            return sum(f1_list)/len(f1_list)
+        else:
+            return log_loss(y_true, y_pred)
+        
     def _eval_rocauc(self, y_true, y_pred):
         '''
             compute ROC-AUC and AP score averaged across tasks
         '''
+        if self.type ==1:
+            rocauc_list = []
 
-        rocauc_list = []
-
-        for i in range(y_true.shape[1]):
-            #AUC is only defined when there is at least one positive data.
-            if np.sum(y_true[:,i] == 1) > 0 and np.sum(y_true[:,i] == 0) > 0:
-                is_labeled = y_true[:,i] == y_true[:,i]
-                rocauc_list.append(roc_auc_score(y_true[is_labeled,i], y_pred[is_labeled,i]))
-
+            for i in range(y_true.shape[1]):
+                #AUC is only defined when there is at least one positive data.
+                if np.sum(y_true[:,i] == 1) > 0 and np.sum(y_true[:,i] == 0) > 0:
+                    is_labeled = y_true[:,i] == y_true[:,i]
+                    rocauc_list.append(roc_auc_score(y_true[is_labeled,i], y_pred[is_labeled,i]))
+            return  sum(rocauc_list)/len(rocauc_list)
+        else:
+            return roc_auc_score(y_true, y_pred)
         # if len(rocauc_list) == 0:
         #     raise RuntimeError('No positively labeled data available. Cannot compute ROC-AUC.')
 
-        return  sum(rocauc_list)/len(rocauc_list)
+       
 
     def _eval_f1(self, y_true, y_pred):
-        f1_list = []
-        for i in range(y_true.shape[1]):
-            #AUC is only defined when there is at least one positive data.
-            if np.sum(y_true[:,i] == 1) > 0 and np.sum(y_true[:,i] == 0) > 0:
-                is_labeled = y_true[:,i] == y_true[:,i]
-                f1_list.append(f1_score(y_true[is_labeled,i], y_pred[is_labeled,i]))
-        
-        return sum(f1_list)/len(f1_list)
+        if self.type == 1:
+            y_pred = f(y_pred)
+            f1_list = []
+            for i in range(y_true.shape[1]):
+                #AUC is only defined when there is at least one positive data.
+                if np.sum(y_true[:,i] == 1) > 0 and np.sum(y_true[:,i] == 0) > 0:
+                    is_labeled = y_true[:,i] == y_true[:,i]
+                    f1_list.append(f1_score(y_true[is_labeled,i], y_pred[is_labeled,i]))
+            return sum(f1_list)/len(f1_list)
+        else:
+            return f1_score(y_true, y_pred)
             
 
     def _eval_acc(self, y_true, y_pred):
-        acc_list = []
+        if self.type ==1 :
+            y_pred = f(y_pred)
+            acc_list = []
 
-        for i in range(y_true.shape[1]):
-            is_labeled = y_true[:,i] == y_true[:,i]
-            correct = y_true[is_labeled,i] == y_pred[is_labeled,i]
-            acc_list.append(float(np.sum(correct))/len(correct))
+            for i in range(y_true.shape[1]):
+                is_labeled = y_true[:,i] == y_true[:,i]
+                correct = y_true[is_labeled,i] == y_pred[is_labeled,i]
+                acc_list.append(float(np.sum(correct))/len(correct))
 
-        return sum(acc_list)/len(acc_list)
+            return sum(acc_list)/len(acc_list)
+        else:
+            assert y_true.shape == y_pred.shape
+            return accuracy_score(y_true,y_pred)
 
 
 def f(x):

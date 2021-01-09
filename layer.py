@@ -6,7 +6,7 @@ from torch_geometric.nn import GENConv, GATConv, SAGEConv, GCNConv
 
 class AdaGNNLayer(torch.nn.Module):
     def __init__(self, conv=None, norm=None, act=None,
-                    dropout=0., ckpt_grad=False):
+                    dropout=0., ckpt_grad=False, lin=False):
         super(AdaGNNLayer, self).__init__()
 
         self.conv = conv
@@ -17,6 +17,7 @@ class AdaGNNLayer(torch.nn.Module):
         # dim = conv.out_channels
         # self.lam = torch.nn.Parameter(torch.zeros(1))
         self.fixed = True
+        self.lin = lin
 
     def unfix(self):
         self.fixed = False
@@ -35,8 +36,10 @@ class AdaGNNLayer(torch.nn.Module):
             if self.conv is not None and self.ckpt_grad and h.requires_grad:
                 h = checkpoint(self.conv, h, *args, **kwargs)
             else:
-                h = self.conv(h, *args, **kwargs)
-
+                if self.lin == False:
+                    h = self.conv(h, *args, **kwargs)
+                else:
+                    h = self.conv(h)
             return h + x
 
     def reset_parameters(self):
@@ -98,7 +101,8 @@ class SAGE(torch.nn.Module):
             layer.reset_parameters()
         self.lin.reset_parameters()
         self.node_encoder.reset_parameters()
-        self.edge_encoder.reset_parameters()
+        if self.edge_encoder != None:
+            self.edge_encoder.reset_parameters()
 
 class GCN(torch.nn.Module):
     def __init__(self,in_channels, hidden_channels, out_channels, num_layers,dropout=0.5):
@@ -208,7 +212,8 @@ class GAT(torch.nn.Module):
             layer.reset_parameters()
         self.lin.reset_parameters()
         self.node_encoder.reset_parameters()
-        self.edge_encoder.reset_parameters()
+        if self.edge_encoder != None:
+            self.edge_encoder.reset_parameters()
 
 
 class WeakGNN(torch.nn.Module):
@@ -217,6 +222,7 @@ class WeakGNN(torch.nn.Module):
         self.node_encoder = Linear(in_channels, hidden_channels)
         self.edge_encoder = Linear(in_channels, hidden_channels)
         self.layers=torch.nn.ModuleList()
+        self.gnn_type = gnn_type
         for i in range(1, num_layers + 1):
             if gnn_type == 'GEN':
                 conv = GENConv(hidden_channels, hidden_channels, aggr='softmax',
@@ -231,8 +237,10 @@ class WeakGNN(torch.nn.Module):
                 conv = GATConv(hidden_channels, hidden_channels)
             norm = LayerNorm(hidden_channels, elementwise_affine=True)
             act = ReLU(inplace=True)
-
-            layer = AdaGNNLayer(conv, norm, act, dropout=0.1, ckpt_grad=False)
+            if gnn_type == 'MLP':
+                layer = AdaGNNLayer(conv, norm, act, dropout=0.1, ckpt_grad=False,lin=True)
+            else:
+                layer = AdaGNNLayer(conv, norm, act, dropout=0.1, ckpt_grad=False)
             self.layers.append(layer)
         self.lin = Linear(hidden_channels, out_channels)
 
@@ -240,7 +248,12 @@ class WeakGNN(torch.nn.Module):
         x = self.node_encoder(x)
         if edge_attr != None:
             edge_attr = self.edge_encoder(edge_attr)
-        x = self.layers[0].conv(x, edge_index, edge_attr)
+        if self.gnn_type == 'MLP':
+            x = self.layers[0].conv(x)
+        elif self.gnn_type == 'GEN':
+            x = self.layers[0].conv(x, edge_index, edge_attr)
+        else:
+            x = self.layers[0].conv(x, edge_index)
         if len(self.layers) > 1:
             for layer in self.layers[1:]:
                 x = layer(x, edge_index, edge_attr)
@@ -255,14 +268,15 @@ class WeakGNN(torch.nn.Module):
             layer.reset_parameters()
         self.lin.reset_parameters()
         self.node_encoder.reset_parameters()
-        self.edge_encoder.reset_parameters()
+        if self.edge_encoder != None:
+            self.edge_encoder.reset_parameters()
 
 class AdaGNN_h(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels, num_gnns, num_layer_list, gnn_model):
+    def __init__(self, in_channels, hidden_channels, out_channels, num_layer_list, gnn_model):
         super(AdaGNN_h, self).__init__()
 
         self.gnns = torch.nn.ModuleList()
-        assert len(num_layer_list) == num_gnns
+        num_gnns = len(num_layer_list)
         self.num_layer_list = num_layer_list
         for i in range(num_gnns):
             gnn = WeakGNN(in_channels, hidden_channels, out_channels,num_layer_list[i],gnn_model[i])
@@ -276,7 +290,7 @@ class AdaGNN_h(torch.nn.Module):
         if k == -1:
             with torch.no_grad():
                 s = self.alpha[0] * self.gnns[0](x,edge_index,edge_attr)
-                for i in range(1 + len(self.gnns)):
+                for i in range(1, len(self.gnns)):
                     if self.alpha[i] == 0:
                         break
                     else:
@@ -291,7 +305,59 @@ class AdaGNN_h(torch.nn.Module):
             gnn.reset_parameters()
         self.alpha = 0
 
+class MLP(torch.nn.Module):
+    def __init__(self,in_channels, hidden_channels, out_channels, num_layers,dropout=0.5):
+        super(MLP, self).__init__()
+        self.node_encoder = Linear(in_channels, hidden_channels)
+        self.layers = torch.nn.ModuleList()
 
+        for i in range(1, num_layers+1):
+            conv = Linear(hidden_channels, hidden_channels)
+            norm = LayerNorm(hidden_channels, elementwise_affine=True)
+            act = ReLU(inplace=True)
+
+            layer = AdaGNNLayer(conv,norm,act,dropout=dropout, lin=True)
+            self.layers.append(layer)
+        
+        self.lin = Linear(hidden_channels, out_channels)
+        self.currenlayer = 1
+        self.layers[0].unfix()
+        self.num_layers = num_layers
+    
+    def get_fixed_layer_cnt(self):
+        return self.currenlayer
+
+    def unfix(self, until_num_layer=1):
+        for i in range(until_num_layer-self.currenlayer):
+            if self.currenlayer > len(self.layers):
+                return self.currenlayer
+            else:
+                self.layers[self.currenlayer].unfix()
+                self.currenlayer +=1
+        return self.currenlayer
+
+    
+    def forward(self, x, edge_index, edge_attr=None):
+        x = self.node_encoder(x)
+        # edge_attr = self.edge_encoder(edge_attr)
+        #print(x.size(), edge_index.size())
+        x = self.layers[0].conv(x)
+
+        for layer in self.layers:
+            x = layer(x, edge_index)
+
+        x = self.layers[0].norm(x)
+        x = self.layers[0].act(x)
+        x = F.dropout(x, p=0.1, training=self.training)
+        return self.lin(x)
+    
+
+    def reset_parameters(self):
+        for layer in self.layers:
+            layer.reset_parameters()
+        self.lin.reset_parameters()
+        self.node_encoder.reset_parameters()
+        
 
 class AdaGNN_v(torch.nn.Module):
     def __init__(self,in_channels, hidden_channels, out_channels, num_layers,dropout=0.5):
@@ -353,4 +419,5 @@ class AdaGNN_v(torch.nn.Module):
             layer.reset_parameters()
         self.lin.reset_parameters()
         self.node_encoder.reset_parameters()
-        self.edge_encoder.reset_parameters()
+        if self.edge_encoder != None:
+            self.edge_encoder.reset_parameters()
