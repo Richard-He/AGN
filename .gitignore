@@ -9,7 +9,5 @@ log*
 dataset/
 savept/
 *.out
-old.py
-G*
 vanilla_d*
 data*
